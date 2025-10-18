@@ -3,36 +3,33 @@ version: '3.8'
 services:
   db:
     image: postgres:15-alpine
-    container_name: todo_postgres
     environment:
       POSTGRES_USER: todouser
       POSTGRES_PASSWORD: todopass
       POSTGRES_DB: tododb
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U todouser -d tododb"]  # ← Fixed this line
+      test: ["CMD-SHELL", "pg_isready -U todouser -d tododb"]
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
 
-  backend:
+  api:
     build: .
-    container_name: todo_backend
-    environment:
-      DATABASE_URL: postgresql://todouser:todopass@db:5432/tododb
     ports:
       - "8000:8000"
-    volumes:
-      - .:/app
+    environment:
+      - DATABASE_URL=postgresql://todouser:todopass@db:5432/tododb
+      - DEBUG=True
     depends_on:
       db:
         condition: service_healthy
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 
-    restart: unless-stopped
+    volumes:
+      - .:/app
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 
 volumes:
   postgres_data:
