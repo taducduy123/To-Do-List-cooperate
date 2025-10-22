@@ -3,7 +3,6 @@
 ## 1. Project Overview  
 A simple **TODO List application** built to demonstrate a full-stack web project using **FastAPI (backend)**, **ReactJS (frontend)**, and **PostgreSQL** (database).  
 The goal of this project is to apply **DevOps practices** — Dockerize the app, automate testing and deployment via **GitHub Actions**, and publish images to **Docker Hub**.  
-Additionally, this project integrates **ChatGPT API** for AI-assisted task suggestions.
 
 ---
 
