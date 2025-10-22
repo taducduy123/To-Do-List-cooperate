@@ -70,7 +70,7 @@ flowchart TB
 ```
 
 ## 5. Project Structure
-
+```
 Mock_project/
 ├── To_do_backend/
 │   ├── src/
@@ -105,16 +105,20 @@ Mock_project/
 │   └── workflows/
 │       └── ci.yml
 └── README.md.
-
+```
 ## 6. Setup & Installation
+
 🐳 Run with Docker Compose
+
 # 1. Clone repo
+```
 git clone https://github.com/huongtraa/Mock-project.git
 cd Mock-project
-
+```
 # 2. Run app
+```
 docker-compose up --build
-
+```
 
 The app will be available at:
 
@@ -124,9 +128,9 @@ Backend (Swagger UI): http://localhost:8000/docs
 
 
 # 4. Run unit tests 
-
+```
 docker exec -it to_do_backend-api-1 pytest
-
+```
 ## 7 API Endpoints
 
 | Method | Endpoint | Description |
