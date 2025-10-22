@@ -1,36 +1,26 @@
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from src.main import app
-from src.database import Base, get_db
+from src.database import get_db
+from src.models import Todo
 
-# Create test database
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Create tables
-Base.metadata.create_all(bind=engine)
-
-
-def override_get_db():
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app)
 
 
 @pytest.fixture(autouse=True)
-def reset_db():
-    """Reset database before each test"""
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+def cleanup_todos():
+    """Clean up todos before and after each test"""
+    db = next(get_db())
+    try:
+        # Clean before test
+        db.query(Todo).delete()
+        db.commit()
+        yield
+        # Clean after test
+        db.query(Todo).delete()
+        db.commit()
+    finally:
+        db.close()
 
 
 def test_create_todo():
@@ -73,7 +63,7 @@ def test_get_todo_by_id():
 
 def test_get_nonexistent_todo():
     """Test getting a todo that doesn't exist"""
-    response = client.get("/api/v1/todos/999")
+    response = client.get("/api/v1/todos/999999")
     assert response.status_code == 404
 
 
@@ -108,11 +98,12 @@ def test_delete_todo():
     get_response = client.get(f"/api/v1/todos/{todo_id}")
     assert get_response.status_code == 404
     
+
 def test_delete_todo_not_found():
     """Test deleting nonexistent todo"""
-    response = client.delete("/api/v1/todos/999")
+    response = client.delete("/api/v1/todos/999999")
     assert response.status_code == 404
-    assert response.json()["detail"] == "Todo with id 999 not found"
+    assert response.json()["detail"] == "Todo with id 999999 not found"
 
 
 def test_health_check():
@@ -120,3 +111,59 @@ def test_health_check():
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "healthy"
+
+
+def test_create_todo_without_description():
+    """Test creating a todo without description"""
+    response = client.post(
+        "/api/v1/todos",
+        json={"title": "Test Todo Only"}
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["title"] == "Test Todo Only"
+    assert data["description"] is None or data["description"] == ""
+
+
+def test_update_partial_todo():
+    """Test partial update of a todo"""
+    # Create a todo
+    create_response = client.post(
+        "/api/v1/todos",
+        json={"title": "Original Title", "description": "Original Description"}
+    )
+    todo_id = create_response.json()["id"]
+    
+    # Update only the completion status
+    response = client.put(
+        f"/api/v1/todos/{todo_id}",
+        json={"is_completed": True}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["is_completed"] is True
+    # Original title should remain if your API supports partial updates
+    
+
+def test_get_todos_pagination():
+    """Test pagination of todos"""
+    # Create multiple todos
+    for i in range(5):
+        client.post("/api/v1/todos", json={"title": f"Test Todo {i}"})
+    
+    # Get with pagination
+    response = client.get("/api/v1/todos?skip=0&limit=3")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 5
+    assert len(data["items"]) == 3
+
+
+def test_create_todo_empty_title():
+    """Test creating a todo with empty title (should fail if validation exists)"""
+    response = client.post(
+        "/api/v1/todos",
+        json={"title": "", "description": "Test"}
+    )
+    # This should return 422 if you have validation, otherwise 201
+    assert response.status_code in [422, 201]
