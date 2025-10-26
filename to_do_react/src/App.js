@@ -1,9 +1,12 @@
-import React, {useState, useEffect, useRef} from "react";
+import React, {useState, useEffect} from "react";
 import "./App.css";
 
 const API_BASE = "http://localhost:8000/api/v1/todos";
 
 function App() {
+    console.log("app is called")
+
+
     const [todos, setTodos] = useState([]);
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
@@ -14,29 +17,32 @@ function App() {
     const [maxPage, setMaxPage] = useState(1);
 
     useEffect(() => {
-        const fetchTodos = async () => {
-            const skip = (page - 1) * limit;
-            let url = `${API_BASE}?skip=${skip}&limit=${limit}`;
-
-            if (filter === "completed")
-                url = `${API_BASE}/filter/completed?skip=${skip}&limit=${limit}`;
-            else if (filter === "pending")
-                url = `${API_BASE}/filter/pending?skip=${skip}&limit=${limit}`;
-
-            try {
-                const res = await fetch(url);
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data = await res.json();
-                setTodos(data.items);
-                setTotal(data.total);
-                setMaxPage(Math.ceil(data.total / limit));
-            } catch (err) {
-                console.error("❌ Error fetching todos:", err);
-            }
-        };
-
         fetchTodos();
-    }, [filter, page, total, limit]);
+    }, [filter, page, limit]);
+
+
+    // View
+    const fetchTodos = async () => {
+        console.log("fetchTodos is called")
+        const skip = (page - 1) * limit;
+        let url = `${API_BASE}?skip=${skip}&limit=${limit}`;
+
+        if (filter === "completed")
+            url = `${API_BASE}/filter/completed?skip=${skip}&limit=${limit}`;
+        else if (filter === "pending")
+            url = `${API_BASE}/filter/pending?skip=${skip}&limit=${limit}`;
+
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            setTodos(data.items);
+            setTotal(data.total);
+            setMaxPage(Math.ceil(data.total / limit));
+        } catch (err) {
+            console.error("❌ Error fetching todos:", err);
+        }
+    };
 
     // --- Add new todo ---
     const handleAddTodo = async (e) => {
