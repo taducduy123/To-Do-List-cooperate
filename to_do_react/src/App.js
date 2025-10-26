@@ -11,12 +11,10 @@ function App() {
     const [page, setPage] = useState(1);
     const [limit] = useState(10);
     const [total, setTotal] = useState(0);
-
-
+    const [maxPage, setMaxPage] = useState(1);
 
     useEffect(() => {
         const fetchTodos = async () => {
-
             const skip = (page - 1) * limit;
             let url = `${API_BASE}?skip=${skip}&limit=${limit}`;
 
@@ -28,20 +26,17 @@ function App() {
             try {
                 const res = await fetch(url);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-
                 const data = await res.json();
-                setTodos(data.items.slice(0, limit));
-                setTotal(data.total - 1);
-
-
+                setTodos(data.items);
+                setTotal(data.total);
+                setMaxPage(Math.ceil(data.total / limit));
             } catch (err) {
                 console.error("❌ Error fetching todos:", err);
             }
         };
 
         fetchTodos();
-    }, [filter, page, limit]);
+    }, [filter, page, total, limit]);
 
     // --- Add new todo ---
     const handleAddTodo = async (e) => {
@@ -56,15 +51,18 @@ function App() {
             });
             if (!res.ok) throw new Error("Failed to add todo");
 
-            // Set new item to top of list
-            const data = await res.json()
-            setTodos([data, ...todos]);
-
-            // Reset form
-            setTitle("");
-            setDescription("");
+            // Add new item to the top of the list
+            let newItem = await res.json();
+            setTodos(todos.length < limit ? [newItem, ...todos] : [newItem, ...todos.slice(0, limit - 1)]);
             setPage(1);
 
+            // Update total and maxPage
+            setTotal(total + 1);
+            setMaxPage(Math.ceil(total / limit));
+
+            // Reset form fields
+            setTitle("");
+            setDescription("");
         } catch (err) {
             console.error("❌ Error adding todo:", err);
         }
@@ -102,6 +100,20 @@ function App() {
             const res = await fetch(`${API_BASE}/${id}`, {method: "DELETE"});
             if (!res.ok) throw new Error("Failed to delete todo");
 
+            // If we deleted the last item IN THE LAST PAGE, go to the previous page
+            if (page === maxPage && todos.length === 1) {
+                setPage(page - 1);
+            }
+
+            // If we deleted the last item IN THE WHOLE LIST
+            if (todos.length === 1) {
+                setTodos([]);
+                setTotal(0);
+                setMaxPage(1);
+                setPage(1);
+                return;
+            }
+
             const skip = (page - 1) * limit;
             let url = `${API_BASE}?skip=${skip}&limit=${limit}`;
             if (filter === "completed")
@@ -112,14 +124,17 @@ function App() {
             const refreshed = await fetch(url);
             const data = await refreshed.json();
             setTodos(data.items);
-            setTotal(data.total);
+
+            // Update total, maxPage
+            setTotal(total - 1);
+            setMaxPage(Math.ceil(total / limit));
+
 
         } catch (err) {
             console.error("❌ Error deleting todo:", err);
         }
     };
 
-    const maxPage = Math.ceil(total / limit) || 1;
 
     return (
         <div className="todo-container">
@@ -175,7 +190,7 @@ function App() {
                     <tbody>
                     {todos.length === 0 ? (
                         <tr>
-                            <td colSpan="5" className="empty-cell">No todos found.</td>
+                            <td colSpan="5" className="empty-cell">No Results Found</td>
                         </tr>
                     ) : (
                         todos.map((todo, index) => (
@@ -222,7 +237,11 @@ function App() {
                 >
                     ⬅ Prev
                 </button>
-                <span className="page-info">Page {page} / {maxPage}</span>
+                {maxPage === 0 ? (
+                    <span className="page-info">Page 1 / 1</span>
+                ) : (
+                    <span className="page-info">Page {page} / {maxPage}</span>
+                )}
                 <button
                     onClick={() => setPage((prev) => (prev < maxPage ? prev + 1 : prev))}
                     disabled={page >= maxPage}
