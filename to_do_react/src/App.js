@@ -13,6 +13,9 @@ import {fetchTodos, createTodo, updateTodo, deleteTodo} from "./api";
 
 
 export default function App() {
+    console.log("app is called")
+
+
     const [todos, setTodos] = useState([]);
     const [filter, setFilter] = useState("all");
     const [page, setPage] = useState(1);
