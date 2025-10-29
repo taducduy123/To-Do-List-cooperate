@@ -9,6 +9,10 @@ import TodoTable from "./components/TodoTable/TodoTable";
 import {fetchTodos, createTodo, updateTodo, deleteTodo} from "./api";
 
 export default function App() {
+    console.log("app is called")
+    console.log("a")
+
+
     const [todos, setTodos] = useState([]);
     const [filter, setFilter] = useState("all");
     const [page, setPage] = useState(1);
