@@ -3,7 +3,7 @@ import { Segmented } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import styles from "./FilterBar.module.css";
 
-export default function FilterBar({ value, onChange, onAdd }) {
+export default function FilterBar_antd({ value, onChange, onAdd }) {
   return (
     <div className={styles.container}>
       <Segmented
@@ -21,8 +21,8 @@ export default function FilterBar({ value, onChange, onAdd }) {
           { label: "Pending", value: "pending" },
           {
             label: (
-              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <PlusOutlined /> Add Todo
+              <span className="btn btn-success" >
+                <PlusOutlined /> Add new task
               </span>
             ),
             value: "add",
