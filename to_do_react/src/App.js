@@ -16,7 +16,7 @@ export default function App() {
     const [todos, setTodos] = useState([]);
     const [filter, setFilter] = useState("all");
     const [page, setPage] = useState(1);
-    const [limit] = useState(10);
+    const [limit] = useState(10); // yêu cầu: tối đa 10/ trang
     const [total, setTotal] = useState(0);
     const [maxPage, setMaxPage] = useState(1);
     const [searchText, setSearchText] = useState("");
@@ -155,5 +155,6 @@ export default function App() {
                 />
             </div>
         </div>
+
     );
 }
