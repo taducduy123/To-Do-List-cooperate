@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
-import { Button, message } from 'antd';
+import { Modal,Button, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import "antd/dist/reset.css";
+import "antd/dist/reset.css"; // (for Ant Design v5)
 import styles from "./App.module.css";
 
 import SearchBar from "./components/SearchBar/SearchBar_antd";
@@ -80,23 +80,27 @@ export default function App() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Delete this todo?")) return;
     try {
       await deleteTodo(id);
       const nextTotal = Math.max(0, total - 1);
       const nextMaxPage = Math.max(1, Math.ceil(nextTotal / limit));
       const nextPage = page > nextMaxPage ? nextMaxPage : page;
-
+  
       setTotal(nextTotal);
       setMaxPage(nextMaxPage);
       setPage(nextPage);
-
+  
       await load({ page: nextPage });
       message.success("Todo deleted!");
     } catch {
       message.error("Failed to delete todo");
     }
   };
+
+  
+  
+  
+
 
   const handleSearch = (value) => {
     setSearchText(value);
