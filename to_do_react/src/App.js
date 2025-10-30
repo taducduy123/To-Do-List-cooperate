@@ -1,103 +1,162 @@
-import {useEffect, useState} from "react";
-import  "./App.css";
+import { useEffect, useState, useCallback } from "react";
+import { Modal,Button, message } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import "antd/dist/reset.css"; // (for Ant Design v5)
+import styles from "./App.module.css";
 
-import TodoForm from "./components/TodoForm/TodoForm";
-import FilterBar from "./components/FilterBar/FilterBar";
-import TodoTable from "./components/TodoTable/TodoTable";
+import SearchBar from "./components/SearchBar/SearchBar_antd";
+import FilterBar from "./components/FilterBar/FilterBar_antd";
+import TodoForm from "./components/TodoForm/TodoForm_antd";
+import TodoTable from "./components/TodoTable/TodoTable_antd";
+import Pagination from "./components/Pagination/Pagination_antd";
 
-
-import {fetchTodos, createTodo, updateTodo, deleteTodo} from "./api";
+import { fetchTodos, createTodo, updateTodo, deleteTodo } from "./api";
 
 export default function App() {
-    console.log("app is called")
-    console.log("a")
+  const [todos, setTodos] = useState([]);
+  const [filter, setFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [maxPage, setMaxPage] = useState(1);
+  const [searchText, setSearchText] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Form states
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [errors, setErrors] = useState({ title: "", description: "" });
+
+  // Load todos
+  const load = useCallback(async (opts = {}) => {
+    setLoading(true);
+    try {
+      const curPage = opts.page ?? page;
+      const curFilter = opts.filter ?? filter;
+      const curSearch = opts.searchText ?? searchText;
+      const skip = (curPage - 1) * limit;
+
+      const data = await fetchTodos(curFilter, skip, limit, curSearch);
+      setTodos(data.items);
+      setTotal(data.total);
+      setMaxPage(Math.max(1, Math.ceil(data.total / limit)));
+    } catch {
+      message.error('Failed to load todos');
+    } finally {
+      setLoading(false);
+    }
+  }, [page, filter, searchText, limit]);
+
+  useEffect(() => {
+    load().catch(console.error);
+  }, [load]);
+
+  const handleCreate = async (payload) => {
+    await createTodo(payload);
+    setTitle("");
+    setDescription("");
+    setErrors({ title: "", description: "" });
+    setPage(1);
+    await load({ page: 1 });
+    setShowForm(false);
+  };
+
+  const handleCancel = () => {
+    setTitle("");
+    setDescription("");
+    setErrors({ title: "", description: "" });
+    setShowForm(false);
+  };
+
+  const handleToggle = async (todo) => {
+    try {
+      await updateTodo(todo.id, { ...todo, is_completed: !todo.is_completed });
+      await load();
+      message.success(todo.is_completed ? 'Marked as pending' : 'Marked as completed');
+    } catch {
+      message.error('Failed to update todo');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await deleteTodo(id);
+      const nextTotal = Math.max(0, total - 1);
+      const nextMaxPage = Math.max(1, Math.ceil(nextTotal / limit));
+      const nextPage = page > nextMaxPage ? nextMaxPage : page;
+  
+      setTotal(nextTotal);
+      setMaxPage(nextMaxPage);
+      setPage(nextPage);
+  
+      await load({ page: nextPage });
+      message.success("Todo deleted!");
+    } catch {
+      message.error("Failed to delete todo");
+    }
+  };
+
+  
+  
+  
 
 
-    const [todos, setTodos] = useState([]);
-    const [filter, setFilter] = useState("all");
-    const [page, setPage] = useState(1);
-    const [limit] = useState(10); // yêu cầu: tối đa 10/ trang
-    const [total, setTotal] = useState(0);
-    const [loading, setLoading] = useState(false); // thêm loading để hiển thị spinner
+  const handleSearch = (value) => {
+    setSearchText(value);
+    setPage(1);
+  };
 
-    useEffect(() => {
-        load().catch(console.error);
-    }, [filter, page, limit]);
+  return (
+    <div className={styles.todoContainer}>
+      <div className={styles.contentWrapper}>
+        <div className={styles.todoHeader}>📝 Todo List</div>
 
-    const load = async (opts = {}) => {
-        setLoading(true);
-        try {
-            const curPage = opts.page ?? page;
-            const curFilter = opts.filter ?? filter;
-            const skip = (curPage - 1) * limit;
+    
 
-            const data = await fetchTodos(curFilter, skip, limit);
-            setTodos(data.items);
-            setTotal(Number(data.total));
-        } finally {
-            setLoading(false);
-        }
-    };
+        {/* Only render TodoForm when showForm is true */}
+       
 
-    const handleCreate = async (payload) => {
-        const newItem = await createTodo(payload);
-        setTodos((prev) => (prev.length < limit ? [newItem, ...prev] : [newItem, ...prev.slice(0, limit - 1)]));
-        setPage(1);
-        setTotal((prev) => prev + 1);
-        setFilter("all");
-    };
+        <SearchBar onSearch={handleSearch} />
 
-    const handleToggle = async (todo) => {
-        await updateTodo(todo.id, {...todo, is_completed: !todo.is_completed});
-        await load();
-    };
+        <FilterBar
+  value={filter}
+  onChange={(f) => {
+    setFilter(f);
+    setPage(1);
+  }}
+  onAdd={() => setShowForm(true)} // 👈 opens TodoForm modal
+/>
+{showForm && (
+          <TodoForm
+            onCreate={handleCreate}
+            onCancel={handleCancel}
+            visible={showForm}
+            title={title}
+            setTitle={setTitle}
+            description={description}
+            setDescription={setDescription}
+            errors={errors}
+            setErrors={setErrors}
+          />
+        )}
 
-    const handleDelete = async (id) => {
-        // if (!window.confirm("Delete this todo?")) return;
-        await deleteTodo(id);
+        <TodoTable
+          todos={todos}
+          page={page}
+          limit={limit}
+          onToggle={handleToggle}
+          onDelete={handleDelete}
+          loading={loading}
+        />
 
-        // Xóa phần tử trong todos
-        setTodos((prev) => prev.filter((t) => t.id !== id));
-
-        // Tính lại trang hiện tại phòng trường hợp xóa phần tử cuối của trang cuối
-        const nextTotal = Math.max(0, total - 1);
-        const nextMaxPage = Math.max(1, Math.ceil(nextTotal / limit));
-        const nextPage = page > nextMaxPage ? nextMaxPage : page;
-
-        setPage(nextPage);
-        setTotal(nextTotal);
-    };
-
-    return (
-
-        <div className="container-fluid min-vh-100 d-flex justify-content-center align-items-center col-12 col-md-8 col-lg-8">
-            <div className="card shadow border-0 bg-primary-subtle">
-                <div className="card-body">
-                    <h1 className="h3 mb-4 text-center">📝 Todo List</h1>
-
-                    <TodoForm onCreate={handleCreate} />
-
-                    <FilterBar
-                        value={filter}
-                        onChange={(f) => {
-                            setFilter(f);
-                            setPage(1);
-                        }}
-                    />
-
-                    <TodoTable
-                        todos={todos}
-                        page={page}
-                        limit={limit}
-                        total={total}
-                        loading={loading}
-                        onToggle={handleToggle}
-                        onDelete={handleDelete}
-                        onPageChange={setPage}
-                    />
-                </div>
-            </div>
-        </div>
-
-    );
+        <Pagination
+          page={page}
+          maxPage={maxPage}
+          onPrev={() => setPage((p) => Math.max(1, p - 1))}
+          onNext={() => setPage((p) => (p < maxPage ? p + 1 : p))}
+        />
+      </div>
+    </div>
+  );
 }
