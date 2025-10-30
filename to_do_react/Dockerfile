@@ -15,6 +15,9 @@ COPY package*.json ./
 
 RUN npm install
 
+
+RUN npm install antd
+
 # Copy app source code
 COPY . .
 
