@@ -1,8 +1,28 @@
-import { Table, Tag, Button } from 'antd';
+import { Table, Tag, Button, Modal } from 'antd';
 import { CheckOutlined, UndoOutlined, DeleteOutlined } from '@ant-design/icons';
+import { useState } from 'react';
 import styles from './TodoTable_antd.module.css';
 
 export default function TodoTable({ todos, page, limit, onToggle, onDelete, loading }) {
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [todoToDelete, setTodoToDelete] = useState(null);
+
+  const showDeleteConfirm = (id) => {
+    setTodoToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    onDelete(todoToDelete);
+    setDeleteModalOpen(false);
+    setTodoToDelete(null);
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteModalOpen(false);
+    setTodoToDelete(null);
+  };
+
   const columns = [
     {
       title: '#',
@@ -14,7 +34,7 @@ export default function TodoTable({ todos, page, limit, onToggle, onDelete, load
       title: 'Title',
       dataIndex: 'title',
       key: 'title',
-      sorter: (a, b) => a.title.localeCompare(b.title), // ✅ A–Z sorting
+      sorter: (a, b) => a.title.localeCompare(b.title),
       sortDirections: ['ascend', 'descend'],
       render: (text, record) => (
         <span className={record.is_completed ? styles.completed : styles.normal}>
@@ -60,11 +80,7 @@ export default function TodoTable({ todos, page, limit, onToggle, onDelete, load
             danger
             size="small"
             icon={<DeleteOutlined />}
-            onClick={() => {
-              if (window.confirm('Delete this todo?')) {
-                onDelete(record.id);
-              }
-            }}
+            onClick={() => showDeleteConfirm(record.id)}
           >
             Delete
           </Button>
@@ -74,15 +90,30 @@ export default function TodoTable({ todos, page, limit, onToggle, onDelete, load
   ];
 
   return (
-    <div className={styles.tableContainer}>
-      <Table
-        columns={columns}
-        dataSource={todos}
-        loading={loading}
-        pagination={false}
-        rowKey="id"
-        locale={{ emptyText: 'No todos found' }}
-      />
-    </div>
+    <>
+      <div className={styles.tableContainer}>
+        <Table
+          columns={columns}
+          dataSource={todos}
+          loading={loading}
+          pagination={false}
+          rowKey="id"
+          locale={{ emptyText: 'No todos found' }}
+        />
+      </div>
+
+      <Modal
+        title="Delete this todo?"
+        open={deleteModalOpen}
+        onOk={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        okText="Yes, delete it"
+        cancelText="Cancel"
+        okButtonProps={{ danger: true }}
+        maskClosable={false}
+      >
+        <p>Are you sure you want to delete this todo item?</p>
+      </Modal>
+    </>
   );
 }
